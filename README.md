@@ -1,0 +1,1 @@
+Repozytorium projektu z przedmiotu Przeszukiwanie i Optymalizacja.
