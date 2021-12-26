@@ -1,0 +1,2 @@
+Według polecenia, koszt pierwszej ścieżki ma być zależny od jej długości.
+Dane zawierają koordynaty miast, więc obliczenie długości ścieżki jest możliwe przy założeniu prostoliniowości.
