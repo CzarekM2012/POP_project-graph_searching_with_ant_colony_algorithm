@@ -10,7 +10,7 @@ their `links` contain the same ids
     """
     def __init__(self, id: int) -> None:
         self.id = id
-        self.links = []
+        self.links = list[Link]()
 
     def add_link(self, link_id: int) -> None:
         if link_id not in self.links:
@@ -35,8 +35,8 @@ class Link:
 Link between nodes of a network.\n
 Consists of tuple `ends` containing ids of nodes
 on both ends of the link, `capacity` and `cost`\n
-Two links are equal if values of their `id`, `capacity` and `cost` are equal, and
-their `ends` contain the same ids.
+Two links are equal if values of their `id`, `capacity` and `cost` are equal,
+and their `ends` contain the same ids.
     """
     def __init__(self, self_id: int, end1_id: int, end2_id: int,
                  capacity: float, cost: float)\
