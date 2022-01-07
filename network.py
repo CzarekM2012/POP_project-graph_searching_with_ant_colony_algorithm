@@ -1,4 +1,5 @@
 from xml.etree import ElementTree as ET
+from collections import Counter
 
 
 class Node:
@@ -20,9 +21,8 @@ their `links` contain the same ids
         if len(self.links) != len(other.links):
             return False
 
-        for link_id in self.links:
-            if link_id not in other.links:
-                return False
+        if Counter(self.links) != Counter(other.links):
+            return False
 
         return self.id == other.id
 
@@ -76,29 +76,32 @@ to return from internal, numerical ids to original string ids.
     """
     def __init__(self, nodes_ids: list[str],
                  links_data: list[tuple[str, str, str, float, float]]) -> None:
-        node_id = 0
-        link_id = 0
+        node_int_id = 0
+        link_int_id = 0
         node_id_str_to_int = dict[str, int]()
         self.nodes_ids_map = []
         self.links_ids_map = []
 
         self.nodes = list[Node]()
-        for id in nodes_ids:
-            if id not in self.nodes_ids_map:
-                self.nodes_ids_map.append(id)
-                self.nodes.append(Node(node_id))
-                node_id_str_to_int[id] = node_id
-                node_id += 1
+        for node_str_id in nodes_ids:
+            if node_str_id not in self.nodes_ids_map:
+                self.nodes_ids_map.append(node_str_id)
+                self.nodes.append(Node(node_int_id))
+                node_id_str_to_int[node_str_id] = node_int_id
+                node_int_id += 1
 
         self.links = list[Link]()
-        for id, end1, end2, capacity, cost in links_data:
-            if id not in self.links_ids_map:
-                end1 = node_id_str_to_int[end1]
-                end2 = node_id_str_to_int[end2]
-                self.links_ids_map.append(id)
-                self.links.append(Link(link_id, end1, end2, capacity, cost))
-                self.nodes[end1].add_link(end2)
-                self.nodes[end2].add_link(end1)
+        for link_str_id, end1_str_id, end2_str_id, capacity, cost\
+                in links_data:
+            if link_str_id not in self.links_ids_map:
+                end1_int_id = node_id_str_to_int[end1_str_id]
+                end2_int_id = node_id_str_to_int[end2_str_id]
+                self.links_ids_map.append(link_str_id)
+                self.links.append(Link(link_int_id, end1_int_id, end2_int_id,
+                                       capacity, cost))
+                self.nodes[end1_int_id].add_link(link_int_id)
+                self.nodes[end2_int_id].add_link(link_int_id)
+                link_int_id += 1
 
 
 def parse_xml(path: str)\

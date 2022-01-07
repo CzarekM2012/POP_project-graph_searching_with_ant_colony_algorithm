@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<network xmlns="http://sndlib.zib.de/network" version="1.0">
+ <networkStructure>
+  <nodes coordinatesType="geographical">
+   <node id="Aachen">
+    <coordinates>
+     <x>6.04</x>
+     <y>50.76</y>
+    </coordinates>
+   </node>
+   <node id="Augsburg">
+    <coordinates>
+     <x>10.9</x>
+     <y>48.33</y>
+    </coordinates>
+   </node>
+   <node id="Bayreuth">
+    <coordinates>
+     <x>11.59</x>
+     <y>49.93</y>
+    </coordinates>
+   </node>
+   <node id="Berlin">
+    <coordinates>
+     <x>13.39</x>
+     <y>52.52</y>
+    </coordinates>
+   </node>
+  </nodes>
+  <links>
+   <link id="L1">
+    <source>Aachen</source>
+    <target>Augsburg</target>
+    <additionalModules>
+     <addModule>
+      <capacity>40.0</capacity>
+      <cost>3290.0</cost>
+     </addModule>
+    </additionalModules>
+   </link>
+   <link id="L2">
+    <source>Berlin</source>
+    <target>Augsburg</target>
+    <additionalModules>
+     <addModule>
+      <capacity>50.0</capacity>
+      <cost>2290.0</cost>
+     </addModule>
+    </additionalModules>
+   </link>
+   <link id="L3">
+    <source>Berlin</source>
+    <target>Bayreuth</target>
+    <additionalModules>
+     <addModule>
+      <capacity>45.0</capacity>
+      <cost>4000.0</cost>
+     </addModule>
+    </additionalModules>
+   </link>
+   <link id="L4">
+    <source>Aachen</source>
+    <target>Bayreuth</target>
+    <additionalModules>
+     <addModule>
+      <capacity>60.0</capacity>
+      <cost>1290.0</cost>
+     </addModule>
+    </additionalModules>
+   </link>
+   <link id="L5">
+    <source>Aachen</source>
+    <target>Berlin</target>
+    <additionalModules>
+     <addModule>
+      <capacity>50.0</capacity>
+      <cost>4500.0</cost>
+     </addModule>
+    </additionalModules>
+   </link>
+  </links>
+ </networkStructure>
+</network>
