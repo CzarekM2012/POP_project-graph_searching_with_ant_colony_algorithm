@@ -11,7 +11,7 @@ their `links` contain the same ids
     """
     def __init__(self, id: int) -> None:
         self.id = id
-        self.links = list[Link]()
+        self.links = list[int]()
 
     def add_link(self, link_id: int) -> None:
         if link_id not in self.links:

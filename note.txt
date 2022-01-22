@@ -1,2 +1,9 @@
 Według polecenia, koszt pierwszej ścieżki ma być zależny od jej długości.
 Dane zawierają koordynaty miast, więc obliczenie długości ścieżki jest możliwe przy założeniu prostoliniowości.
+
+Jeżeli padnie pytanie odnośnie tego czemu jest założone, że połączenia są symetryczne,
+są miasta z dwoma połączeniami w tym samym kierunku(Bremerhaven).
+Z tego powodu, żeby wyznaczyć ścieżkę której końcem/początkiem jest takie miasto,
+wymagana byłaby arbitralna modyfikacja, któregoś z wychodzących z niego połączeń,
+stwierdzenie, że wszystkie połączenia są dwukierunkowe jest mniej szkodliwe
+(W pracy przekazanej do przeczytania, połączenia w modelu formalnym były traktowane jako jednokierunkowe)
