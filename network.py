@@ -12,6 +12,7 @@ their `links` contain the same ids
     def __init__(self, id: int) -> None:
         self.id = id
         self.links = list[int]()
+        self.comp = 0   # To make custom comparisions e.g. with PriorityQueue
 
     def add_link(self, link_id: int) -> None:
         if link_id not in self.links:
@@ -28,6 +29,9 @@ their `links` contain the same ids
 
     def __ne__(self, other: 'Node') -> bool:
         return not self == other
+
+    def __lt__(self, other):
+        return self.comp < other.comp
 
 
 class Link:
@@ -64,6 +68,9 @@ and their `ends` contain the same ids.
 
     def __ne__(self, other: 'Link') -> bool:
         return not self == other
+    
+    def __str__(self):
+        return f"Link {self.id} between {self.ends[0]} and {self.ends[1]}, capacity: {self.capacity}, cost: {self.cost}"
 
 
 class Network:
