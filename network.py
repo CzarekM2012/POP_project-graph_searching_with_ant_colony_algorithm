@@ -57,6 +57,10 @@ and their `ends` contain the same ids.
             return self.ends[0]
         raise ValueError('given end is not one of the ends of this link')
 
+    def get_a_star_cost(self):
+        return 1/self.capacity
+        #return self.cost
+
     def __eq__(self, other: 'Link') -> bool:
         return ((self.ends[0] == other.ends[0] and
                  self.ends[1] == other.ends[1]) or
