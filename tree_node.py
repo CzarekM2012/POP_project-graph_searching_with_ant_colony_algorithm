@@ -113,6 +113,8 @@ A node consists of a partial solution and references to its parent and sons
         while head != None:
             node_ids.append(head.head.id)
             head = head.parent
+        
+        node_ids.reverse() # For the sake of readability when put one under the other
 
 #        phase = 1
 #        added = True
