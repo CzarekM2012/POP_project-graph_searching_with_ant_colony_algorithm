@@ -72,13 +72,13 @@ def calculate_min_cost(network):
 def get_scale(cost_tab, dist_tab):
     sum_dist = 0
     sum_cost = 0
-    for i in range(len(network.nodes)):
-        for j in range(len(network.nodes)):
-            sum_dist += min_dist[i][j]
-            sum_cost += min_cost[i][j]
+    for i in range(len(cost_tab)):
+        for j in range(len(cost_tab[0])):
+            sum_dist += dist_tab[i][j]
+            sum_cost += cost_tab[i][j]
 
-    avg_dist = sum_dist/len(network.nodes)
-    avg_cost = sum_cost/len(network.nodes)
+    avg_dist = sum_dist/len(cost_tab)
+    avg_cost = sum_cost/len(cost_tab)
     return avg_dist/avg_cost
 
 
