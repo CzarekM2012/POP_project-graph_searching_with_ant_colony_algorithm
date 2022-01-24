@@ -14,12 +14,10 @@ rivalizing ants.\n
     """
     def __init__(self, pheromones_weights: tuple[float],
                  pheromone_influence: float = 1.0,
-                 criterion_influence: float = 1.0,
-                 pheromone_amount: float = 1.0) -> None:
+                 criterion_influence: float = 1.0) -> None:
         self.pheromones_weights = pheromones_weights
         self.pheromone_influence = pheromone_influence
         self.criterion_influence = criterion_influence
-        self.pheromone_amount = pheromone_amount
         self.path = list[net.Link]()
 
     def calc_links_attractiveness(self) -> None:
@@ -43,10 +41,6 @@ that does and will not have this method implemented')
                 self.path.append(links[i])
                 return links[i]
 
-    def allot_pheromone(self) -> None:
-        raise NotImplementedError('This is an instance of an abstract class \
-that does and will not have this method implemented')
-
 
 class RivalDistanceAnt(RivalAnt):
 
@@ -67,11 +61,6 @@ class RivalDistanceAnt(RivalAnt):
                                         math.pow(1/link.cost,
                                                  self.criterion_influence))
         return links_attractiveness
-
-    def allot_pheromone(self) -> list[tuple[net.Link, float]]:
-        sum_distance = sum([link.cost for link in self.path])
-        return [(link, self.pheromone_amount/sum_distance)
-                for link in self.path]
 
 
 class RivalCapacityAnt(RivalAnt):
@@ -104,10 +93,6 @@ class RivalCapacityAnt(RivalAnt):
                                         math.pow(link.capacity,
                                                  self.criterion_influence))
         return links_attractiveness
-
-    def allot_pheromone(self) -> list[tuple[net.Link, float]]:
-        return [(link, self.pheromone_amount * self.path_min_capacity)
-                for link in self.path]
 
 
 class RivalAntsAlgorithmNetwork(net.Network):
@@ -145,15 +130,16 @@ length')
         destination = self.nodes[self.nodes_ids_map.index(destination_id)]
         added_pheromones = np.zeros(self.pheromones_amounts.shape)
         for _ in range(generations_number):
-            for i in range(len(ants_types_data)):
-                ant_type, weights = ants_types_data[i]
-                for _ in range(ants_per_generation):
+            for _ in range(ants_per_generation):
+                paths = []
+                for i in range(len(ants_types_data)):
+                    ant_type, weights = ants_types_data[i]
                     ant = ant_type(pheromones_weights=weights)
-                    ant_pheromone_spread =\
-                        self.send_ant(ant, start, destination)
-                    for link, pheromone_amount in ant_pheromone_spread:
-                        added_pheromones[i][link.id] += pheromone_amount
-                print(f'{ant_type.__name__}, {len(ant_pheromone_spread)}')
+                    paths.append(self.send_ant(ant, start, destination))
+                alloted_pheromones = self.allot_pheromones(paths)
+                for i in range(len(alloted_pheromones)):
+                    for j in range(len(alloted_pheromones[i])):
+                        added_pheromones[i][j] += alloted_pheromones[i][j]
             self.update_pheromones(added_pheromones)
 
     def send_ant(self, ant: RivalAnt, start_node: net.Node,
@@ -169,8 +155,44 @@ length')
                      in range(len(self.pheromones_amounts))])
             link = ant.choose_link(available_links, available_links_pheromones)
             current_node = self.nodes[link.get_other_end(current_node.id)]
-        ant_pheromone_spread = ant.allot_pheromone()
-        return ant_pheromone_spread
+        return ant.path
+
+    def allot_pheromones(self, paths: list[list[net.Link]])\
+            -> list[list[float]]:
+        alloted_pheromone = []
+        for _ in range(self.pheromones_amounts.shape[0]):
+            alloted_pheromone.append([0.0] * self.pheromones_amounts.shape[1])
+
+        DISTANCE_WEIGHT = 1
+        CAPACITY_WEIGHT = 1
+        present_in_paths = []
+        for _ in range(len(self.links)):
+            present_in_paths.append([False] * len(paths))
+
+        distance_path_cost = 0.0
+        capacity_path_cost = 1
+        for link in paths[0]:
+            present_in_paths[link.id][0] = True
+            distance_path_cost += link.cost
+        for link in paths[1]:
+            present_in_paths[link.id][1] = True
+            capacity_path_cost *= 1
+        common_edges_count = present_in_paths.count([True, True])
+
+        #cost = (CAPACITY_WEIGHT + DISTANCE_WEIGHT) * (common_edges_count + 1) -\
+        #    DISTANCE_WEIGHT/distance_path_cost -\
+        #    CAPACITY_WEIGHT/capacity_path_cost
+
+        cost = distance_path_cost
+
+        print(distance_path_cost)
+
+        for i in range(len(present_in_paths)):
+            for j in range(len(paths)):
+                if present_in_paths[i][j]:
+                    alloted_pheromone[j][i] = 1/cost
+
+        return alloted_pheromone
 
     def update_pheromones(self, added_pheromones: np.ndarray) -> None:
         for i in range(added_pheromones.shape[0]):
