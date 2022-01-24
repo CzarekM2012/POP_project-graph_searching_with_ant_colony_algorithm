@@ -24,14 +24,17 @@ rivalizing ants.\n
         raise NotImplementedError('This is an instance of an abstract class \
 that does and will not have this method implemented')
 
-    def choose_link(self, links: list[net.Link],
-                    pheromones_amounts: list[float])\
-            -> net.Link:
-        if len(self.path) > 0:
-            back_index = links.index(self.path[-1])
-            links.pop(back_index)
-            pheromones_amounts.pop(back_index)
-        thresholds = self.calc_links_attractiveness(links, pheromones_amounts)
+    def choose_link(self, links_data:
+                    list[tuple[net.Link, float, list[float]]]) -> net.Link:
+        links, results_min_distances_to_dest, pheromones_amounts = [], [], []
+        for record in links_data:
+            link, result_min_dist, pheromones_amount = record
+            links.append(link)
+            results_min_distances_to_dest.append(result_min_dist)
+            pheromones_amounts.append(pheromones_amount)
+        thresholds =\
+            self.calc_links_attractiveness(links, pheromones_amounts,
+                                           results_min_distances_to_dest)
         max_roll = sum(thresholds)
         roll = random.uniform(0, max_roll)
         walking_sum = 0
@@ -45,21 +48,25 @@ that does and will not have this method implemented')
 class RivalDistanceAnt(RivalAnt):
 
     def calc_links_attractiveness(self, links: list[net.Link],
-                                  pheromones_amounts: list[tuple[float]])\
+                                  pheromones_amounts: list[tuple[float]],
+                                  target_nodes_min_dest_dist: list[float])\
             -> list[float]:
         links_attractiveness = []
         for i in range(len(links)):
             link = links[i]
             link_pheromones = pheromones_amounts[i]
+            distance_heuristic = target_nodes_min_dest_dist[i]
             pheromones_value = 0.0
             for j in range(len(self.pheromones_weights)):
                 pheromones_value +=\
                     link_pheromones[j] * self.pheromones_weights[j]
             pheromones_value = max(self.MIN_PHEROMONE_VALUE, pheromones_value)
-            links_attractiveness.append(math.pow(pheromones_value,
-                                                 self.pheromone_influence) *
-                                        math.pow(1/link.cost,
-                                                 self.criterion_influence))
+            pheromones_impact =\
+                math.pow(pheromones_value, self.pheromone_influence)
+            criterion_impact =\
+                math.pow(1/(link.cost + distance_heuristic),
+                         self.criterion_influence)
+            links_attractiveness.append(pheromones_impact * criterion_impact)
         return links_attractiveness
 
 
@@ -70,28 +77,32 @@ class RivalCapacityAnt(RivalAnt):
         super().__init__(pheromones_weights)
         self.path_min_capacity = start_path_min_capacity
 
-    def choose_link(self, links: list[net.Link],
-                    pheromones_amounts: list[float]) -> net.Link:
-        link = super().choose_link(links, pheromones_amounts)
+    def choose_link(self, links_data:
+                    list[tuple[net.Link, float, list[float]]]) -> net.Link:
+        link = super().choose_link(links_data)
         self.path_min_capacity = min(self.path_min_capacity, link.capacity)
         return link
 
     def calc_links_attractiveness(self, links: list[net.Link],
-                                  pheromones_amounts: list[tuple[float]])\
+                                  pheromones_amounts: list[tuple[float]],
+                                  target_nodes_min_dest_dist: list[float])\
             -> list[float]:
         links_attractiveness = []
         for i in range(len(links)):
             link = links[i]
             link_pheromones = pheromones_amounts[i]
+            distance_heuristic = target_nodes_min_dest_dist[i]
             pheromones_value = 0.0
             for j in range(len(self.pheromones_weights)):
                 pheromones_value +=\
                     link_pheromones[j] * self.pheromones_weights[j]
             pheromones_value = max(self.MIN_PHEROMONE_VALUE, pheromones_value)
-            links_attractiveness.append(math.pow(pheromones_value,
-                                                 self.pheromone_influence) *
-                                        math.pow(link.capacity,
-                                                 self.criterion_influence))
+            pheromones_impact =\
+                math.pow(pheromones_value, self.pheromone_influence)
+            criterion_impact =\
+                math.pow(link.capacity + 0.01/(link.cost + distance_heuristic),
+                         self.criterion_influence)
+            links_attractiveness.append(pheromones_impact * criterion_impact)
         return links_attractiveness
 
 
@@ -105,9 +116,7 @@ class RivalAntsAlgorithmNetwork(net.Network):
             np.zeros((ant_types_count, len(self.links)))
         self.pheromone_evaporation_coefficient =\
             pheromone_evaporation_coefficient
-        self.max_distance = max([link.cost for link in self.links]) # try normalizing values for ants heuristics
-        self.min_distance = min([link.cost for link in self.links])
-        self.max_capacity = max([link.capacity for link in self.links])
+        self.minimal_nodes_distances = np.asarray(self.nodes_min_distance())
 
     def rival_ants_algorithm(self, start_id: str, destination_id: str,
                              ants_types_data: list[tuple[type[RivalAnt],
@@ -146,14 +155,23 @@ length')
                  destination_node: net.Node) -> list[tuple[net.Link, float]]:
         current_node = start_node
         while current_node != destination_node:
-            available_links =\
-                [self.links[link_id] for link_id in current_node.links]
-            available_links_pheromones = []
+            # links_data =\
+            #   [(link available from current_node, min distance between node
+            #     at the other end of this link and destination_node,
+            #     pheromone amounts for all ant types on this link)]
+            links_data = []
             for link_id in current_node.links:
-                available_links_pheromones.append(
+                available_link = self.links[link_id]
+                other_end_id = available_link.get_other_end(current_node.id)
+                other_end_destination_min_distance =\
+                    self.minimal_nodes_distances[destination_node.id][other_end_id]
+                pheromones_amounts =\
                     [self.pheromones_amounts[i][link_id] for i
-                     in range(len(self.pheromones_amounts))])
-            link = ant.choose_link(available_links, available_links_pheromones)
+                     in range(len(self.pheromones_amounts))]
+                links_data.append((available_link,
+                                   other_end_destination_min_distance,
+                                   pheromones_amounts))
+            link = ant.choose_link(links_data)
             current_node = self.nodes[link.get_other_end(current_node.id)]
         return ant.path
 
