@@ -29,6 +29,8 @@ that does and will not have this method implemented')
         links, results_min_distances_to_dest, pheromones_amounts = [], [], []
         for record in links_data:
             link, result_min_dist, pheromones_amount = record
+            if len(self.path) > 0 and link == self.path[-1]:
+                continue
             links.append(link)
             results_min_distances_to_dest.append(result_min_dist)
             pheromones_amounts.append(pheromones_amount)
@@ -46,6 +48,12 @@ that does and will not have this method implemented')
 
 
 class RivalDistanceAnt(RivalAnt):
+
+    def __init__(self, pheromones_weights: tuple[float],
+                 pheromone_influence: float = 1,
+                 criterion_influence: float = 2) -> None:
+        super().__init__(pheromones_weights, pheromone_influence,
+                         criterion_influence)
 
     def calc_links_attractiveness(self, links: list[net.Link],
                                   pheromones_amounts: list[tuple[float]],
@@ -100,7 +108,7 @@ class RivalCapacityAnt(RivalAnt):
             pheromones_impact =\
                 math.pow(pheromones_value, self.pheromone_influence)
             criterion_impact =\
-                math.pow(link.capacity + 0.01/(link.cost + distance_heuristic),
+                math.pow(link.capacity - link.load + 0.01/(link.cost + distance_heuristic),
                          self.criterion_influence)
             links_attractiveness.append(pheromones_impact * criterion_impact)
         return links_attractiveness
@@ -110,11 +118,12 @@ class RivalAntsAlgorithmNetwork(net.Network):
     def __init__(self, nodes_ids: list[str],
                  links_data: list[tuple[str, str, str, float, float]],
                  ant_types_count: int,
-                 pheromone_evaporation_coefficient: float = 0.6) -> None:
+                 pheromone_evaporation_coefficient: float = 0.5) -> None:
         super().__init__(nodes_ids, links_data)
         min_link_cost = min([link.cost for link in self.links])
         for i in range(len(self.links)):
             self.links[i].cost /= min_link_cost
+            self.links[i].load = 0.01 * self.links[i].capacity
         self.pheromones_amounts =\
             np.ones((ant_types_count, len(self.links)))
         self.pheromone_evaporation_coefficient =\
@@ -144,8 +153,8 @@ length')
         for _ in range(generations_number):
             for _ in range(ants_per_generation):
                 paths = []
-                for i in range(len(ants_types_data)):
-                    ant_type, weights = ants_types_data[i]
+                for ant_type_data in ants_types_data:
+                    ant_type, weights = ant_type_data
                     ant = ant_type(pheromones_weights=weights)
                     paths.append(self.send_ant(ant, start, destination))
                 alloted_pheromones = self.allot_pheromones(paths)
@@ -153,6 +162,14 @@ length')
                     for j in range(len(alloted_pheromones[i])):
                         added_pheromones[i][j] += alloted_pheromones[i][j]
             self.update_pheromones(added_pheromones)
+        paths = []
+        for ant_type_data in ants_types_data:
+            ant_type, weights = ant_type_data
+            ant = ant_type(pheromones_weights=weights)
+            path = self.send_ant(ant, start, destination)
+            path = [self.links_ids_map[link.id] for link in path]
+            paths.append(path)
+        return paths
 
     def send_ant(self, ant: RivalAnt, start_node: net.Node,
                  destination_node: net.Node) -> list[tuple[net.Link, float]]:
@@ -197,16 +214,14 @@ length')
             distance_path_cost += link.cost
         for link in paths[1]:
             present_in_paths[link.id][1] = True
-            capacity_path_cost *= 1
+            capacity_path_cost *= (link.capacity - link.load)/link.capacity
         common_edges_count = present_in_paths.count([True, True])
 
-        #cost = (CAPACITY_WEIGHT + DISTANCE_WEIGHT) * (common_edges_count + 1) -\
-        #    DISTANCE_WEIGHT/distance_path_cost -\
-        #    CAPACITY_WEIGHT/capacity_path_cost
+        cost = (CAPACITY_WEIGHT + DISTANCE_WEIGHT) * (common_edges_count + 1) -\
+            DISTANCE_WEIGHT / distance_path_cost -\
+            CAPACITY_WEIGHT * capacity_path_cost
 
-        cost = distance_path_cost
-
-        print(distance_path_cost)
+        print(cost)
 
         for i in range(len(present_in_paths)):
             for j in range(len(paths)):
@@ -227,6 +242,11 @@ length')
 nodes_data, links_data = net.parse_xml('data/network_structure.xml')
 test_network = RivalAntsAlgorithmNetwork(nodes_data, links_data, 2)
 paths = test_network.rival_ants_algorithm('Aachen', 'Passau',
-                                          [(RivalDistanceAnt, (1, 0)),
-                                           (RivalCapacityAnt, (0, 1))])
-print('')
+                                          [(RivalDistanceAnt, (1, -0.9)),
+                                           (RivalCapacityAnt, (-0.9, 1))])
+for i in range(len(test_network.pheromones_amounts[0])):
+    print(f'{test_network.links_ids_map[i]}: {test_network.pheromones_amounts[0][i]}, {test_network.pheromones_amounts[1][i]}')
+
+print(f'shortest distance path {len(paths[0])} edges: {paths[0]}')
+print(f'lowest load path {len(paths[1])} edges: {paths[1]}')
+print(f'common edges count {len(set(paths[0]) & set(paths[1]))}')

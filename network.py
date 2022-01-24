@@ -45,6 +45,7 @@ and their `ends` contain the same ids.
         self.id = self_id
         self.ends = (end1_id, end2_id)
         self.capacity = capacity
+        self.load = 0
         self.cost = cost
 
     def get_other_end(self, end: int) -> int:
