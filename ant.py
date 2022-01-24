@@ -112,6 +112,9 @@ class RivalAntsAlgorithmNetwork(net.Network):
                  ant_types_count: int,
                  pheromone_evaporation_coefficient: float = 0.6) -> None:
         super().__init__(nodes_ids, links_data)
+        min_link_cost = min([link.cost for link in self.links])
+        for i in range(len(self.links)):
+            self.links[i].cost /= min_link_cost
         self.pheromones_amounts =\
             np.zeros((ant_types_count, len(self.links)))
         self.pheromone_evaporation_coefficient =\
@@ -214,12 +217,11 @@ length')
 
     def update_pheromones(self, added_pheromones: np.ndarray) -> None:
         for i in range(added_pheromones.shape[0]):
-            normalization_divider = added_pheromones[i].max()
             for j in range(added_pheromones.shape[1]):
                 self.pheromones_amounts[i][j] =\
                     self.pheromones_amounts[i][j] *\
                     (1-self.pheromone_evaporation_coefficient) +\
-                    added_pheromones[i][j] / normalization_divider
+                    added_pheromones[i][j]
 
 
 nodes_data, links_data = net.parse_xml('data/network_structure.xml')
