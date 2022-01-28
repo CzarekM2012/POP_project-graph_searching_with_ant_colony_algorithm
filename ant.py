@@ -278,8 +278,8 @@ if __name__ == '__main__':
     params = (-0.9, 1, 3, -0.9, 1, 45)
     logging.basicConfig(filename='rival_ants.log', format='%(levelname)s - %(message)s')
 
-nodes_data, links_data = net.parse_xml('data/network_structure.xml')
-test_network = RivalAntsAlgorithmNetwork(nodes_data, links_data, 2)
+    nodes_data, links_data = net.parse_xml('data/network_structure.xml')
+    test_network = RivalAntsAlgorithmNetwork(nodes_data, links_data, 2)
 
     for i in range(1):
         #new_dist_cap_love = random.normalvariate(params[0], 0.25)
