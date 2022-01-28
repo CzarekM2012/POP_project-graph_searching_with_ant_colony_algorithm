@@ -1,6 +1,8 @@
 from xml.etree import ElementTree as ET
 from collections import Counter
 from math import log10
+from queue import SimpleQueue
+
 
 class Node:
     """
@@ -141,6 +143,33 @@ to return from internal, numerical ids to original string ids.
             link.load = self.links[index].load
         
         return network
+
+    def nodes_min_distance(self) -> list[list[float]]:
+        min_dist = []
+        MORE_THAN_LONGEST_PATH =\
+            max([link.cost for link in self.links]) * len(self.links) + 1
+        for _ in range(len(self.nodes)):
+            min_dist.append([MORE_THAN_LONGEST_PATH] * len(self.nodes))
+
+        for node in self.nodes:
+            min_dist[node.id][node.id] = 0
+
+        # BFS for each node
+        for start_node in self.nodes:
+            q = SimpleQueue()
+            q.put(start_node)
+            while not q.empty():
+                node = q.get()
+
+                for link_id in node.links:
+                    link = self.links[link_id]
+                    new_dist = min_dist[start_node.id][node.id] + link.cost
+
+                    for end in link.ends:
+                        if min_dist[start_node.id][end] > new_dist:
+                            q.put(self.nodes[end])
+                            min_dist[start_node.id][end] = new_dist
+        return min_dist
 
 
 def parse_xml(path: str)\
