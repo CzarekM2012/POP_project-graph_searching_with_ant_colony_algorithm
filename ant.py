@@ -270,17 +270,55 @@ def cost_func(paths: list[list[net.Link]], all_links_count: int,
         (capacity_weight * capacity_path_cost)
 
 
+if __name__ == '__main__':
+    import logging
+    import random
+    # distance ants: love towards capacity ants, pheromone influence, criterion influence;
+    # capacity ants: love towards distance ants, pheromone influence, criterion influence
+    params = (-0.9, 1, 3, -0.9, 1, 45)
+    logging.basicConfig(filename='rival_ants.log', format='%(levelname)s - %(message)s')
 
 nodes_data, links_data = net.parse_xml('data/network_structure.xml')
 test_network = RivalAntsAlgorithmNetwork(nodes_data, links_data, 2)
-paths =\
-    test_network.rival_ants_algorithm('Aachen', 'Passau',
-                                      [(RivalDistanceAnt((1, -0.9), 1, 0.5)),
-                                       (RivalCapacityAnt((-0.9, 1), 1, 3))],
-                                      cost_func)
-for i in range(len(test_network.pheromones_amounts[0])):
-    print(f'{test_network.links_ids_map[i]}: {test_network.pheromones_amounts[0][i]}, {test_network.pheromones_amounts[1][i]}')
 
-print(f'shortest distance path {len(paths[0])} edges: {paths[0]}')
-print(f'lowest load path {len(paths[1])} edges: {paths[1]}')
-print(f'common edges count {len(set(paths[0]) & set(paths[1]))}')
+    for i in range(1):
+        #new_dist_cap_love = random.normalvariate(params[0], 0.25)
+        #new_dist_pheromone = random.normalvariate(params[1], 1)
+        #new_dist_criterion = random.normalvariate(params[2], 1)
+        #new_cap_dist_love = random.normalvariate(params[3], 0.25)
+        #new_cap_pheromone = random.normalvariate(params[4], 1)
+        #new_cap_criterion = random.normalvariate(params[5], 1)
+#
+        #if(new_dist_cap_love >= 0):
+        #    new_dist_cap_love = params[0]
+        #if(new_dist_pheromone < 0):
+        #    new_dist_pheromone = params[1]
+        #if(new_dist_criterion < 0):
+        #    new_dist_criterion = params[2]
+        #if(new_cap_dist_love >= 0):
+        #    new_cap_dist_love = params[3]
+        #if(new_cap_pheromone < 0):
+        #    new_cap_pheromone = params[4]
+        #if(new_cap_criterion < 0):
+        #    new_cap_criterion = params[5]
+#
+        #params = (new_dist_cap_love, new_dist_pheromone, new_dist_criterion,
+        #          new_cap_dist_love, new_cap_pheromone, new_cap_criterion)
+        #summary = [[], [], []]
+        #logging.critical(params)
+        for i in range(1):
+            paths =\
+                test_network.rival_ants_algorithm('Aachen', 'Passau',
+                                                  [(RivalDistanceAnt((1, params[0]), params[1], params[2])),
+                                                   (RivalCapacityAnt((params[3], 1), params[4], params[5]))],
+                                                  cost_func, 5, 25)
+
+#            summary[0].append(len(paths[0]))
+#            summary[1].append(len(paths[1]))
+#            summary[2].append(len(set(paths[0]) & set(paths[1])))
+#            logging.error(f'shortest distance path {len(paths[0])} edges, \
+#lowest load path {len(paths[1])} edges, \
+#common edges count {len(set(paths[0]) & set(paths[1]))}')
+#        logging.error(f'shortest distance path {sum(summary[0])/len(summary[0]):.2f} edges on average, \
+#lowest load path {sum(summary[1])/len(summary[1]):.2f} edges on average, \
+#common edges count {sum(summary[2])/len(summary[2]):.2f} on average')
