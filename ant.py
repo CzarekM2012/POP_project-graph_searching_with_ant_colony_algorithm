@@ -79,16 +79,25 @@ class RivalDistanceAnt(RivalAnt):
 
 
 class RivalCapacityAnt(RivalAnt):
-
     def __init__(self, pheromones_weights: tuple[float],
-                 start_path_min_capacity: int = 1000000) -> None:
-        super().__init__(pheromones_weights)
-        self.path_min_capacity = start_path_min_capacity
+                 pheromone_influence: float = 1.0,
+                 criterion_influence: float = 1.0) -> None:
+        super().__init__(pheromones_weights, pheromone_influence,
+                         criterion_influence)
+        self.path_avg_length = 0
+        self.path_avg_capacity = 0
+        self.path_avg_load = 0
+        self.path_edges_count = 0
 
     def choose_link(self, links_data:
                     list[tuple[net.Link, float, list[float]]]) -> net.Link:
         link = super().choose_link(links_data)
-        self.path_min_capacity = min(self.path_min_capacity, link.capacity)
+        self.path_avg_length =\
+            (link.cost + self.path_avg_length * self.path_edges_count) / (self.path_edges_count + 1)
+        self.path_avg_capacity =\
+            (link.capacity + self.path_avg_capacity * self.path_edges_count) / (self.path_edges_count + 1)
+        self.path_avg_load =\
+            (link.load + self.path_avg_load * self.path_edges_count) / (self.path_edges_count + 1)
         return link
 
     def calc_links_attractiveness(self, links: list[net.Link],
@@ -107,8 +116,18 @@ class RivalCapacityAnt(RivalAnt):
             pheromones_value = max(self.MIN_PHEROMONE_VALUE, pheromones_value)
             pheromones_impact =\
                 math.pow(pheromones_value, self.pheromone_influence)
+            new_path_link_avg_length =\
+                (link.cost + self.path_avg_length * self.path_edges_count) / (self.path_edges_count + 1)
+            new_path_link_avg_capacity =\
+                (link.capacity + self.path_avg_capacity * self.path_edges_count) / (self.path_edges_count + 1)
+            new_path_link_avg_load =\
+                (link.load + self.path_avg_load * self.path_edges_count) / (self.path_edges_count + 1)
+            links_left_approximation = round(distance_heuristic/new_path_link_avg_length)
+            free_capacity = (link.capacity - link.load)/link.capacity
+            new_path_link_avg_free_capacity =\
+                (new_path_link_avg_capacity - new_path_link_avg_load)/new_path_link_avg_capacity
             criterion_impact =\
-                math.pow(link.capacity - link.load + 0.01/(link.cost + distance_heuristic),
+                math.pow(free_capacity * math.pow(new_path_link_avg_free_capacity, links_left_approximation),
                          self.criterion_influence)
             links_attractiveness.append(pheromones_impact * criterion_impact)
         return links_attractiveness
@@ -121,8 +140,10 @@ class RivalAntsAlgorithmNetwork(net.Network):
                  pheromone_evaporation_coefficient: float = 0.5) -> None:
         super().__init__(nodes_ids, links_data)
         min_link_cost = min([link.cost for link in self.links])
+        max_link_capacity = max([link.capacity for link in self.links])
         for i in range(len(self.links)):
             self.links[i].cost /= min_link_cost
+            self.links[i].capacity /= max_link_capacity
             self.links[i].load = 0.01 * self.links[i].capacity
         self.pheromones_amounts =\
             np.ones((ant_types_count, len(self.links)))
@@ -172,7 +193,7 @@ length')
         return paths
 
     def send_ant(self, ant: RivalAnt, start_node: net.Node,
-                 destination_node: net.Node) -> list[tuple[net.Link, float]]:
+                 destination_node: net.Node) -> list[net.Link]:
         current_node = start_node
         while current_node != destination_node:
             # links_data =\
