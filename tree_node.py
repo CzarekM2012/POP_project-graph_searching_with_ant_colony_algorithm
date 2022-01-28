@@ -8,7 +8,6 @@ class TreeNode:
     min_dist = None
     min_cost = None
 
-    weight_common = 1000000000
     weight_length = 1
     weight_cost = 1
 
@@ -92,7 +91,7 @@ A node consists of a partial solution and references to its parent and sons
                 cost_prod *= (capacity - load) / capacity
             
             if value == 3:
-                result += TreeNode.weight_common
+                result += TreeNode.weight_cost + TreeNode.weight_length
 
         if dist_sum == 0:
             result -= TreeNode.weight_length
@@ -120,12 +119,11 @@ A node consists of a partial solution and references to its parent and sons
         heur_dist_sum = dist_sum
         heur_cost_prod = cost_prod
         if self.phase == 1:
-            # TODO: Add something to speed up decisions
             heur_dist_sum += TreeNode.min_dist[self.head.id][TreeNode.end_node.id]
             heur_cost_prod *= pow(10, -TreeNode.weight_cost * TreeNode.min_cost[self.end_node.id][self.start_node.id]) # 10^-cost to reverse -log10 that was necessary for Dijkstra to function
         elif self.phase == 2:
             heur_cost_prod *= pow(10, -TreeNode.weight_cost * TreeNode.min_cost[self.head.id][self.start_node.id])
-            heur_dist_sum += 0.0001 * TreeNode.min_dist[self.head.id][TreeNode.start_node.id]   # TODO: Ensure, that this doesn't make the function invalid
+            #heur_dist_sum += 0.0001 * TreeNode.min_dist[self.head.id][TreeNode.start_node.id]   # A small addition to speed up search. Shouldn't be big enough to make a real difference between otherwise same solutions
         else:
             return 0
 

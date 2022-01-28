@@ -82,7 +82,7 @@ def get_scale(cost_tab, dist_tab):
     return avg_dist/avg_cost
 
 
-def prepare_solution_tree(network, start_node, end_node, min_cost_tab, min_dist_tab, weight_common, weight_length, weight_cost):
+def prepare_solution_tree(network, start_node, end_node, min_cost_tab, min_dist_tab, weight_length, weight_cost):
 
     #start_node = network.nodes[network.nodes_ids_map.index("Norden")]
     #end_node = network.nodes[network.nodes_ids_map.index("Passau")]
@@ -95,7 +95,6 @@ def prepare_solution_tree(network, start_node, end_node, min_cost_tab, min_dist_
     TreeNode.min_cost = min_cost_tab
     TreeNode.min_dist = min_dist_tab
 
-    TreeNode.weight_common = weight_common
     TreeNode.weight_length = weight_length
     TreeNode.weight_cost = weight_cost
     return TreeNode([0] * len(network.links), None, start_node, 1)
@@ -151,6 +150,6 @@ if __name__ == "__main__":
         network.nodes[network.nodes_ids_map.index("Norden")],
         network.nodes[network.nodes_ids_map.index("Passau")],
         min_cost, min_dist,
-        1000000000, 1, 1
+        1, 1
     )
     print(f"Found: {a_star(root)}")

@@ -114,6 +114,33 @@ to return from internal, numerical ids to original string ids.
                 self.nodes[end1_int_id].add_link(link_int_id)
                 self.nodes[end2_int_id].add_link(link_int_id)
                 link_int_id += 1
+        
+    def get_node_id_str_list(self) -> list[str]:
+        list = []
+        for index, node in enumerate(self.nodes):
+            list.append(self.nodes_ids_map[index])
+        return list
+    
+    def get_link_data_list(self) -> list[tuple[str, str, str, float, float]]:
+        list = []
+        for index, link in enumerate(self.links):
+            link_tuple = (
+                self.links_ids_map[index],
+                self.nodes_ids_map[link.ends[0]],
+                self.nodes_ids_map[link.ends[1]],
+                link.capacity,
+                link.cost
+            )
+            list.append(link_tuple)
+        return list
+
+    def get_network_copy(self) -> "Network":
+        network = Network(self.get_node_id_str_list(), self.get_link_data_list())
+        
+        for index, link in enumerate(network.links):
+            link.load = self.links[index].load
+        
+        return network
 
 
 def parse_xml(path: str)\

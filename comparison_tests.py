@@ -11,7 +11,6 @@ REPEAT = 1000
 # Test params, will be changed later for the next test
 # A simple test to check correctness
 # Optimal paths: Path: [S->c->d->K, S->a->b->K] or [2, 1, 2, 0, 2, 1, 1] edge-wise
-WEIGHT_COMMON = 1000000000
 WEIGHT_COST = 1
 WEIGHT_DIST = 1
 nodes_ids = ['S', 'K', 'a', 'b', 'c', 'd']
@@ -105,7 +104,7 @@ def rate_solution(solution):
             cost_prod *= (capacity - load) / capacity
         
         if value == 3:
-            result += WEIGHT_COMMON
+            result += WEIGHT_DIST + WEIGHT_COST
     result -= WEIGHT_DIST / dist_sum
     result -= WEIGHT_COST * cost_prod
     return result
@@ -124,8 +123,7 @@ def test(algorithm, start_node_id, end_node_id):
             network, 
             network.nodes[start_node_id],
             network.nodes[end_node_id],
-            min_cost, min_dist,
-            WEIGHT_COMMON, WEIGHT_DIST, WEIGHT_COST
+            min_cost, min_dist, WEIGHT_DIST, WEIGHT_COST
         )
 
         solution_node = a_star(root)
@@ -181,6 +179,133 @@ def randomize_network_load(network, capacity_min, capacity_max):
     for link in network.links:
         link.load = random.uniform(capacity_min, capacity_max * link.capacity)
 
+def reset_network_load():
+    for link in network.links:
+        link.load = 0
+
+def get_network_load():
+    load = []
+    for link in network.links:
+        load.append(link.load)
+    return load
+
+def set_network_load(load_tab):
+    for index, link in enumerate(network.links):
+        link.load = load_tab[index]
+
+
+def apply_load(solution, load):
+    """
+    Increases network load on links used in given solution.
+    Limits added load to the lowest remaining capacity of paths used in solution
+    Retruns how much load was added
+    """
+    # Check maximum possible load
+    for edge, value in enumerate(solution):
+        gap = network.links[edge].capacity - network.links[edge].load
+        if value == 1 or value == 2:
+            if load > gap:
+                load = gap
+
+        elif value == 3:
+            if load > gap/2:
+                load = gap/2
+
+    # Apply the load to every node
+    for edge, value in enumerate(solution):
+        if value == 1 or value == 3:
+            network.links[edge].load += load
+
+        if value == 2 or value == 3:
+            network.links[edge].load += load
+    
+    return load
+
+def get_network_to_fit(load):
+    """
+    Returns a sub-network consisting only of links that can bear given load (have enough capacity left)
+    """
+    node_list = network.get_node_id_str_list()
+    link_list = network.get_link_data_list()
+
+    removed = True
+    while removed:
+        removed = False
+        for i in range(len(link_list)):
+            link_id = network.links_ids_map.index(link_list[i][0])
+            if network.links[link_id].capacity - network.links[link_id].load < load: # Link's capacity too low
+                link_list.pop(i)
+                print(f"Removed link: {link_list[i]}")
+                removed = True
+                break
+    
+    new_network = Network(node_list, link_list)
+    for index, link in enumerate(new_network.links):
+        link.load = network.links[network.links_ids_map.index(new_network.links_ids_map[index])].load
+    
+    return new_network
+
+def test_cumulative_network_load(task_load_min, task_load_max):
+    global network
+
+    # Both algorithms receive same, randomized tasks
+    task_list = []
+    for i in range(REPEAT):
+        start_id = random.randrange(len(network.nodes))
+        end_id = random.randrange(len(network.nodes))
+        if start_id == end_id:
+            continue
+
+        load = random.uniform(task_load_min, task_load_max)
+
+        task_list.append((start_id, end_id, load))
+
+    score_sum = [0, 0]
+    time_prep_sum = [0, 0]
+    time_run_sum = [0, 0]
+
+    # Backup state, to load it before running second algorithm
+    network_backup = network.get_network_copy()
+
+    for task in task_list:
+        start_id = task[0]
+        end_id = task[1]
+        load = task[2]
+        #print(f"{network.nodes_ids_map[start_id]} {network.nodes_ids_map[end_id]}")
+
+        network = get_network_to_fit(load)
+
+        solution, score, time_prep, time_run = test(ALG_A_STAR, start_id, end_id)
+
+        apply_load(solution, load)
+
+        score_sum[0] += score
+        time_prep_sum[0] += time_prep
+        time_run_sum[0] += time_run
+
+    network = network_backup.get_network_copy()
+
+    for task in task_list:
+        start_id = task[0]
+        end_id = task[1]
+        load = task[2]
+        #print(f"{network.nodes_ids_map[start_id]} {network.nodes_ids_map[end_id]}")
+
+        #solution, score, time_prep, time_run = test(ALG_ANT_COLONY, start_id, end_id)
+
+        #apply_load(solution, load)
+        
+        #score_sum[1] += score
+        #time_prep_sum[1] += time_prep
+        #time_run_sum[1] += time_run
+
+    score_avg = [score_sum[0]/REPEAT, score_sum[1]/REPEAT]
+    time_prep_avg = [time_prep_sum[0]/REPEAT, time_prep_sum[1]/REPEAT]
+    time_run_avg = [time_run_sum[0]/REPEAT, time_run_sum[1]/REPEAT]
+
+    network = network_backup.get_network_copy()
+
+    print(f"Algorithms: A*, Ant colony\n Score: {score_avg}, prep time: {time_prep_avg}, run time: {time_run_avg}")
 
 # First case is so simple, that time differences hard to measure accurately
 # It is run only to check correctness and score
@@ -203,5 +328,7 @@ network = Network(nodes_ids, links_data)
 
 randomize_network_load(network, 0.4, 0.6)
 test_random_pair()
-#test_cumulative_network_load()
+
+randomize_network_load(network, 0.4, 0.6)
+test_cumulative_network_load(0.03, 0.05)
 
