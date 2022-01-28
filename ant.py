@@ -158,6 +158,7 @@ implementing calc_links_attractiveness() and list with length equal to
 for decision-making process of associated ant type, for example:\n
 `ants_types_data` = [(RivalDistanceAnt, [1, -1]), (RivalCapacityAnt, [-1, 1])]
         """
+        self.pheromones_amounts = np.ones_like(self.pheromones_amounts)
         start = self.nodes[self.nodes_ids_map.index(start_id)]
         destination = self.nodes[self.nodes_ids_map.index(destination_id)]
         added_pheromones = np.zeros(self.pheromones_amounts.shape)
