@@ -3,10 +3,11 @@ from a_star import *
 from os import path
 import time
 import random
+from ant import *
 
 ALG_A_STAR = 1
 ALG_ANT_COLONY = 2
-REPEAT = 1000
+REPEAT = 100
 
 # Test params, will be changed later for the next test
 # A simple test to check correctness
@@ -88,7 +89,7 @@ def is_solution_valid(solution, start_node_id, end_node_id):
             break # Break the for loop, which would otherwise iterate over other links from last head
     return False
 
-def rate_solution(solution):
+def rate_solution_A_star(solution):
     """
     Returns a score for the solution in given network according to global weights 
     """
@@ -105,15 +106,34 @@ def rate_solution(solution):
         
         if value == 3:
             result += WEIGHT_DIST + WEIGHT_COST
+    
+    result += WEIGHT_DIST + WEIGHT_COST
     result -= WEIGHT_DIST / dist_sum
     result -= WEIGHT_COST * cost_prod
     return result
 
+def rate_solution_ant_colony(paths, network):
+    link_paths = [[network.get_link_by_id(link_id) for link_id in paths[0]], [network.get_link_by_id(link_id) for link_id in paths[1]]]
+    return cost_func(link_paths, len(network.links), WEIGHT_DIST, WEIGHT_COST)
+
 def test(algorithm, start_node_id, end_node_id):
     solution = None
+    score = 0
     time_prep = time.time()
-    min_cost = calculate_min_cost(network)
-    min_dist = calculate_min_dist(network)
+    min_dist = None
+    min_cost = None
+    test_network = None
+
+    if algorithm == ALG_A_STAR:
+        min_dist = calculate_min_dist(network)
+        min_cost = calculate_min_cost(network)
+
+    if algorithm == ALG_ANT_COLONY:
+        # Ant colony algorithm has its own network that needs conversion to
+        test_network = RivalAntsAlgorithmNetwork(network.get_node_id_str_list(), network.get_link_data_list(), 2)
+
+        for index, link in enumerate(test_network.links):
+            link.load = network.links[index].load / network.links[index].capacity
 
     time_prep = time.time() - time_prep
 
@@ -127,20 +147,41 @@ def test(algorithm, start_node_id, end_node_id):
         )
 
         solution_node = a_star(root)
+        
+        time_run = time.time() - time_run
+
         #print(f"A* found {solution_node}")
         solution = solution_node.solution
-    
+
+        if not is_solution_valid(solution, start_node_id, end_node_id):
+            print(f"Found an invalid solution: {solution}")
+            return solution, float("-inf"), time_prep, time_run
+
+        score = rate_solution_A_star(solution)
+
     elif algorithm == ALG_ANT_COLONY:
-        solution = [0] * len(network.links)
 
-    time_run = time.time() - time_run
-    
-    if not is_solution_valid(solution, start_node_id, end_node_id):
-        print(f"Found an invalid solution: {solution}")
-        return solution, float("-inf"), time_prep, time_run
+        paths = test_network.rival_ants_algorithm(
+            network.nodes_ids_map[start_node_id], network.nodes_ids_map[end_node_id],
+            [ (RivalDistanceAnt((1, -0.9), 1, 0.5)),
+            (RivalCapacityAnt((-0.9, 1), 1, 3)) ],
+            cost_func, generations_number=10
+        )
+        
+        time_run = time.time() - time_run
 
+        #for i in range(len(test_network.pheromones_amounts[0])):
+        #    print(f'{test_network.links_ids_map[i]}: {test_network.pheromones_amounts[0][i]}, {test_network.pheromones_amounts[1][i]}')
 
-    score = rate_solution(solution)
+        #print(f'shortest distance path {len(paths[0])} edges: {paths[0]}')
+        #print(f'lowest load path {len(paths[1])} edges: {paths[1]}')
+        #print(f'common edges count {len(set(paths[0]) & set(paths[1]))}')
+
+        score = rate_solution_ant_colony(paths, test_network)
+        solution = paths
+#(paths: list[list[net.Link]], all_links_count: int,
+#              distance_weight: float = 2, capacity_weight: float = 2) -> None:
+
     return solution, score, time_prep, time_run
 
 
@@ -161,10 +202,11 @@ def test_random_pair():
         score_sum[0] += score
         time_prep_sum[0] += time_prep
         time_run_sum[0] += time_run
-        #solution, score, time_prep, time_run = test(ALG_ANT_COLONY, start_id, end_id)
-        #score_sum[1] += score
-        #time_prep_sum[1] += time_prep
-        #time_run_sum[1] += time_run
+        
+        solution, score, time_prep, time_run = test(ALG_ANT_COLONY, start_id, end_id)
+        score_sum[1] += score
+        time_prep_sum[1] += time_prep
+        time_run_sum[1] += time_run
 
     score_avg = [score_sum[0]/REPEAT, score_sum[1]/REPEAT]
     time_prep_avg = [time_prep_sum[0]/REPEAT, time_prep_sum[1]/REPEAT]
@@ -291,13 +333,13 @@ def test_cumulative_network_load(task_load_min, task_load_max):
         load = task[2]
         #print(f"{network.nodes_ids_map[start_id]} {network.nodes_ids_map[end_id]}")
 
-        #solution, score, time_prep, time_run = test(ALG_ANT_COLONY, start_id, end_id)
+        solution, score, time_prep, time_run = test(ALG_ANT_COLONY, start_id, end_id)
 
-        #apply_load(solution, load)
+        apply_load(solution, load)
         
-        #score_sum[1] += score
-        #time_prep_sum[1] += time_prep
-        #time_run_sum[1] += time_run
+        score_sum[1] += score
+        time_prep_sum[1] += time_prep
+        time_run_sum[1] += time_run
 
     score_avg = [score_sum[0]/REPEAT, score_sum[1]/REPEAT]
     time_prep_avg = [time_prep_sum[0]/REPEAT, time_prep_sum[1]/REPEAT]
@@ -315,7 +357,6 @@ solution, score, time_prep, time_run = test(ALG_ANT_COLONY, network.nodes_ids_ma
 print(f"Ant colony found solution: {solution}")
 
 # A simple test to check single path predictions in a completly free network (germany-50)
-WEIGHT_COMMON = 1000000000
 WEIGHT_COST = 1
 WEIGHT_DIST = 1
 nodes_ids, links_data = parse_xml(path.normpath(path.join('data', 'network_structure.xml')))
@@ -330,5 +371,5 @@ randomize_network_load(network, 0.4, 0.6)
 test_random_pair()
 
 randomize_network_load(network, 0.4, 0.6)
-test_cumulative_network_load(0.03, 0.05)
+test_cumulative_network_load(0.01, 0.03)
 
