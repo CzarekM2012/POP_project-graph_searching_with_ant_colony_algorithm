@@ -2,6 +2,7 @@ import network as net
 import math
 import random
 import numpy as np
+from copy import deepcopy
 
 # TODO: Rescaling of criterion in both RivalAnts variants in the way that will make values of pheromone and criterion influences comparable
 
@@ -48,13 +49,6 @@ that does and will not have this method implemented')
 
 
 class RivalDistanceAnt(RivalAnt):
-
-    def __init__(self, pheromones_weights: tuple[float],
-                 pheromone_influence: float = 1,
-                 criterion_influence: float = 2) -> None:
-        super().__init__(pheromones_weights, pheromone_influence,
-                         criterion_influence)
-
     def calc_links_attractiveness(self, links: list[net.Link],
                                   pheromones_amounts: list[tuple[float]],
                                   target_nodes_min_dest_dist: list[float])\
@@ -152,8 +146,8 @@ class RivalAntsAlgorithmNetwork(net.Network):
         self.minimal_nodes_distances = np.asarray(self.nodes_min_distance())
 
     def rival_ants_algorithm(self, start_id: str, destination_id: str,
-                             ants_types_data: list[tuple[type[RivalAnt],
-                                                         tuple[float]]],
+                             ants_originals: list[RivalAnt],
+                             cost_func,
                              ants_per_generation: int = 10,
                              generations_number: int = 100)\
             -> tuple[list[net.Link, net.Link]]:
@@ -164,29 +158,22 @@ implementing calc_links_attractiveness() and list with length equal to
 for decision-making process of associated ant type, for example:\n
 `ants_types_data` = [(RivalDistanceAnt, [1, -1]), (RivalCapacityAnt, [-1, 1])]
         """
-        for ant_type_data in ants_types_data:
-            if len(ant_type_data[1]) != len(ants_types_data):
-                raise ValueError(f'weights list associated with {type} has wrong \
-length')
         start = self.nodes[self.nodes_ids_map.index(start_id)]
         destination = self.nodes[self.nodes_ids_map.index(destination_id)]
         added_pheromones = np.zeros(self.pheromones_amounts.shape)
         for _ in range(generations_number):
             for _ in range(ants_per_generation):
                 paths = []
-                for ant_type_data in ants_types_data:
-                    ant_type, weights = ant_type_data
-                    ant = ant_type(pheromones_weights=weights)
-                    paths.append(self.send_ant(ant, start, destination))
-                alloted_pheromones = self.allot_pheromones(paths)
+                for ant in ants_originals:
+                    new_ant = deepcopy(ant)
+                    paths.append(self.send_ant(new_ant, start, destination))
+                alloted_pheromones = self.allot_pheromones(paths, cost_func)
                 for i in range(len(alloted_pheromones)):
                     for j in range(len(alloted_pheromones[i])):
                         added_pheromones[i][j] += alloted_pheromones[i][j]
             self.update_pheromones(added_pheromones)
         paths = []
-        for ant_type_data in ants_types_data:
-            ant_type, weights = ant_type_data
-            ant = ant_type(pheromones_weights=weights)
+        for ant in ants_originals:
             path = self.send_ant(ant, start, destination)
             path = [self.links_ids_map[link.id] for link in path]
             paths.append(path)
@@ -216,38 +203,19 @@ length')
             current_node = self.nodes[link.get_other_end(current_node.id)]
         return ant.path
 
-    def allot_pheromones(self, paths: list[list[net.Link]])\
-            -> list[list[float]]:
+    def allot_pheromones(self, paths: list[list[net.Link]],
+                         cost_func) -> list[list[float]]:
         alloted_pheromone = []
         for _ in range(self.pheromones_amounts.shape[0]):
             alloted_pheromone.append([0.0] * self.pheromones_amounts.shape[1])
 
-        DISTANCE_WEIGHT = 1
-        CAPACITY_WEIGHT = 1
-        present_in_paths = []
-        for _ in range(len(self.links)):
-            present_in_paths.append([False] * len(paths))
+        cost = cost_func(paths, self.pheromones_amounts.shape[1])
 
-        distance_path_cost = 0.0
-        capacity_path_cost = 1
-        for link in paths[0]:
-            present_in_paths[link.id][0] = True
-            distance_path_cost += link.cost
-        for link in paths[1]:
-            present_in_paths[link.id][1] = True
-            capacity_path_cost *= (link.capacity - link.load)/link.capacity
-        common_edges_count = present_in_paths.count([True, True])
+        #print(f'{len(paths[0])}, {len(paths[1])}, {cost}')
 
-        cost = (CAPACITY_WEIGHT + DISTANCE_WEIGHT) * (common_edges_count + 1) -\
-            DISTANCE_WEIGHT / distance_path_cost -\
-            CAPACITY_WEIGHT * capacity_path_cost
-
-        print(cost)
-
-        for i in range(len(present_in_paths)):
-            for j in range(len(paths)):
-                if present_in_paths[i][j]:
-                    alloted_pheromone[j][i] = 1/cost
+        for i in range(len(paths)):
+            for link in paths[i]:
+                alloted_pheromone[i][link.id] = 1/cost
 
         return alloted_pheromone
 
@@ -260,11 +228,34 @@ length')
                     added_pheromones[i][j]
 
 
+def cost_func(paths: list[list[net.Link]], all_links_count: int,
+              distance_weight: float = 2, capacity_weight: float = 2) -> None:
+    present_in_paths = []
+    for _ in range(all_links_count):
+        present_in_paths.append([False] * len(paths))
+
+    distance_path_cost = 0.0
+    capacity_path_cost = 1
+    for link in paths[0]:
+        present_in_paths[link.id][0] = True
+        distance_path_cost += link.cost
+    for link in paths[1]:
+        present_in_paths[link.id][1] = True
+        capacity_path_cost *= (link.capacity - link.load)/link.capacity
+    common_edges_count = present_in_paths.count([True, True])
+    cost = (capacity_weight + distance_weight) * (common_edges_count + 1) -\
+        (distance_weight / distance_path_cost) -\
+        (capacity_weight * capacity_path_cost)
+    return cost
+
+
 nodes_data, links_data = net.parse_xml('data/network_structure.xml')
 test_network = RivalAntsAlgorithmNetwork(nodes_data, links_data, 2)
-paths = test_network.rival_ants_algorithm('Aachen', 'Passau',
-                                          [(RivalDistanceAnt, (1, -0.9)),
-                                           (RivalCapacityAnt, (-0.9, 1))])
+paths =\
+    test_network.rival_ants_algorithm('Aachen', 'Passau',
+                                      [(RivalDistanceAnt((1, -0.9), 1, 0.5)),
+                                       (RivalCapacityAnt((-0.9, 1), 1, 3))],
+                                      cost_func)
 for i in range(len(test_network.pheromones_amounts[0])):
     print(f'{test_network.links_ids_map[i]}: {test_network.pheromones_amounts[0][i]}, {test_network.pheromones_amounts[1][i]}')
 
