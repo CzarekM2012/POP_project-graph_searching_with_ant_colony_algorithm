@@ -132,11 +132,8 @@ class RivalAntsAlgorithmNetwork(net.Network):
                  pheromone_evaporation_coefficient: float = 0.5) -> None:
         super().__init__(nodes_ids, links_data)
         min_link_cost = min([link.cost for link in self.links])
-        max_link_capacity = max([link.capacity for link in self.links])
         for i in range(len(self.links)):
             self.links[i].cost /= min_link_cost
-            self.links[i].capacity /= max_link_capacity
-            self.links[i].load = 0.01 * self.links[i].capacity
         self.pheromones_amounts =\
             np.ones((ant_types_count, len(self.links)))
         self.pheromone_evaporation_coefficient =\
@@ -144,11 +141,10 @@ class RivalAntsAlgorithmNetwork(net.Network):
         self.minimal_nodes_distances = np.asarray(self.nodes_min_distance())
 
     def rival_ants_algorithm(self, start_id: str, destination_id: str,
-                             ants_originals: list[RivalAnt],
-                             cost_func,
-                             ants_per_generation: int = 10,
+                             ants_originals: list[RivalAnt], cost_func,
+                             ants_per_generation: int = 5,
                              generations_number: int = 100)\
-            -> tuple[list[net.Link, net.Link]]:
+            -> list[list[str]]:
         """
 `ants_per_generation` copies of each `RivalAnt` in `ants_originals`,
 will be sent to explore graph and leave pheromone, in each of
