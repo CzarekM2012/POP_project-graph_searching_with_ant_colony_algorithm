@@ -1,6 +1,6 @@
 from xml.etree import ElementTree as ET
 from collections import Counter
-
+from math import log10
 
 class Node:
     """
@@ -48,6 +48,7 @@ and their `ends` contain the same ids.
         self.id = self_id
         self.ends = (end1_id, end2_id)
         self.capacity = capacity
+        self.load = 0
         self.cost = cost
 
     def get_other_end(self, end: int) -> int:
@@ -58,7 +59,7 @@ and their `ends` contain the same ids.
         raise ValueError('given end is not one of the ends of this link')
 
     def get_a_star_cost(self):
-        return 1/self.capacity
+        return -log10((self.capacity - self.load)/self.capacity) # Negative to turn log() into a positive value, for it to be processed by Dijkstra
         #return self.cost
 
     def __eq__(self, other: 'Link') -> bool:

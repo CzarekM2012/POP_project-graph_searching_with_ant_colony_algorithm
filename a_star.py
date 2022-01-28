@@ -53,7 +53,7 @@ def calculate_min_cost(network):
         q.put(start_node)
         while not q.empty():
             node = q.get()
-    
+
             for link_id in node.links:
                 link = network.links[link_id]
                 new_cost = min_cost[start_node.id][node.id] + link.get_a_star_cost()
@@ -82,7 +82,7 @@ def get_scale(cost_tab, dist_tab):
     return avg_dist/avg_cost
 
 
-def prepare_solution_tree(network, start_node, end_node, min_cost_tab, min_dist_tab, scale_cost, weight_common, weight_length, weight_cost):
+def prepare_solution_tree(network, start_node, end_node, min_cost_tab, min_dist_tab, weight_common, weight_length, weight_cost):
 
     #start_node = network.nodes[network.nodes_ids_map.index("Norden")]
     #end_node = network.nodes[network.nodes_ids_map.index("Passau")]
@@ -94,7 +94,6 @@ def prepare_solution_tree(network, start_node, end_node, min_cost_tab, min_dist_
     
     TreeNode.min_cost = min_cost_tab
     TreeNode.min_dist = min_dist_tab
-    TreeNode.scale_cost = scale_cost
 
     TreeNode.weight_common = weight_common
     TreeNode.weight_length = weight_length
@@ -113,11 +112,11 @@ def a_star(root):
     while not end and not len(q) < 1:
         visited_count += 1
         score, tree_node = heappop(q)
-        print(tree_node)
-        #print(f"Current score: {tree_node.get_score()}, \nsolution: {tree_node.solution}")
+        #print(tree_node)
+        #print(f"Current score: {tree_node.get_score()} = {tree_node.get_goal_function()} + {tree_node.get_heuristic()}")
 
         if tree_node.phase == 3:
-            print(f"Visited {visited_count} solutions")
+            #print(f"Visited {visited_count} solutions")
             return tree_node
 
         tree_node.create_children_nodes()
@@ -125,6 +124,9 @@ def a_star(root):
         for child in tree_node.children:
             #print(child.solution)
             heappush(q, (child.get_score(), child))
+    
+    return None
+
 
 # Usage example
 if __name__ == "__main__":
@@ -132,6 +134,9 @@ if __name__ == "__main__":
         parse_xml(path.normpath(path.join('data', 'network_structure.xml')))
 
     network = Network(nodes_ids, links_data)
+
+    for link_id in range(len(network.links)):
+        network.links[link_id].load = network.links[link_id].capacity/2
     
     print(nodes_ids)
     print(links_data)
@@ -139,14 +144,13 @@ if __name__ == "__main__":
     min_cost = calculate_min_cost(network)
     min_dist = calculate_min_dist(network)
     
-    scale_cost =  get_scale(min_cost, min_dist)
-    print(f"Cost will be additionaly multiplied by {scale_cost}")
-    
+    print(min_cost)
+
     root = prepare_solution_tree(
         network, 
-        network.nodes[network.nodes_ids_map.index("Berlin")],
-        network.nodes[network.nodes_ids_map.index("Regensburg")],
-        min_cost, min_dist, scale_cost,
+        network.nodes[network.nodes_ids_map.index("Norden")],
+        network.nodes[network.nodes_ids_map.index("Passau")],
+        min_cost, min_dist,
         1000000000, 1, 1
     )
     print(f"Found: {a_star(root)}")

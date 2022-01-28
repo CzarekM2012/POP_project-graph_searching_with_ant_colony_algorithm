@@ -1,3 +1,5 @@
+from math import pow
+
 class TreeNode:
     network = None
     start_node = None
@@ -9,7 +11,6 @@ class TreeNode:
     weight_common = 1000000000
     weight_length = 1
     weight_cost = 1
-    scale_cost = 1
 
     """
     Node of A* partial solution tree.\n
@@ -77,28 +78,81 @@ A node consists of a partial solution and references to its parent and sons
     # Doesn't check validity
     def get_goal_function(self):
         result = 0
+        dist_sum = 0
+        cost_prod = 1
+
         for edge, value in enumerate(self.solution):
             
             if value == 1 or value == 3:
-                result += TreeNode.weight_length
+                dist_sum += 1
 
             if value == 2 or value == 3:
-                result += TreeNode.weight_cost * TreeNode.network.links[edge].get_a_star_cost()
+                capacity = TreeNode.network.links[edge].capacity
+                load = TreeNode.network.links[edge].load
+                cost_prod *= (capacity - load) / capacity
             
             if value == 3:
                 result += TreeNode.weight_common
 
+        if dist_sum == 0:
+            result -= TreeNode.weight_length
+        else: 
+            result -= TreeNode.weight_length / dist_sum
+        result -= TreeNode.weight_cost * cost_prod
         return result
     
-
-    
     def get_heuristic(self):
+        result = 0
+        dist_sum = 0
+        cost_prod = 1
+
+        for edge, value in enumerate(self.solution):
+            
+            if value == 1 or value == 3:
+                dist_sum += 1
+
+            if value == 2 or value == 3:
+                capacity = TreeNode.network.links[edge].capacity
+                load = TreeNode.network.links[edge].load
+                cost_prod *= (capacity - load) / capacity
+
+        
+        heur_dist_sum = dist_sum
+        heur_cost_prod = cost_prod
         if self.phase == 1:
-            return TreeNode.weight_length * TreeNode.min_dist[self.head.id][TreeNode.end_node.id] + TreeNode.weight_cost * TreeNode.scale_cost * TreeNode.min_cost[self.head.id][self.end_node.id] + TreeNode.weight_length * TreeNode.min_dist[self.end_node.id][TreeNode.start_node.id] + TreeNode.weight_cost * TreeNode.scale_cost * TreeNode.min_cost[self.end_node.id][self.start_node.id]
+            # TODO: Add something to speed up decisions
+            heur_dist_sum += TreeNode.min_dist[self.head.id][TreeNode.end_node.id]
+            heur_cost_prod *= pow(10, -TreeNode.weight_cost * TreeNode.min_cost[self.end_node.id][self.start_node.id]) # 10^-cost to reverse -log10 that was necessary for Dijkstra to function
         elif self.phase == 2:
-            return TreeNode.weight_length * TreeNode.min_dist[self.head.id][TreeNode.start_node.id] + TreeNode.weight_cost * TreeNode.scale_cost * TreeNode.min_cost[self.head.id][self.start_node.id]
+            heur_cost_prod *= pow(10, -TreeNode.weight_cost * TreeNode.min_cost[self.head.id][self.start_node.id])
+            heur_dist_sum += 0.0001 * TreeNode.min_dist[self.head.id][TreeNode.start_node.id]   # TODO: Ensure, that this doesn't make the function invalid
         else:
             return 0
+
+        if dist_sum == 0:
+            result += TreeNode.weight_length
+        else: 
+            result += TreeNode.weight_length / dist_sum
+        result += TreeNode.weight_cost * cost_prod
+
+        # No need to check for 0 here
+        result -= TreeNode.weight_length / heur_dist_sum
+        result -= TreeNode.weight_cost * heur_cost_prod        
+    
+        #print(f"TEST: {heur_cost_prod}, {heur_dist_sum}")
+
+        return result
+    
+    #def get_heuristic(self):
+    #    if self.phase == 1:
+    #        return (
+    #            - TreeNode.weight_length / TreeNode.min_dist[self.head.id][TreeNode.end_node.id]
+    #            - pow(10, -TreeNode.weight_cost * TreeNode.min_cost[self.end_node.id][self.start_node.id]) # 10^-cost to reverse -log10 that was necessary for Dijkstra to function
+    #        )
+    #    elif self.phase == 2:
+    #        return - pow(10, -TreeNode.weight_cost * TreeNode.min_cost[self.head.id][self.start_node.id])
+    #    else:
+    #        return 0
 
     def __lt__(self, other):
         #print(f"Comparing: {self.get_score()} and {other.get_score()}") #": {self.solution} {other.solution}")
