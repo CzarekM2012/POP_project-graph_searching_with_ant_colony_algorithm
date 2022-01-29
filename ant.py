@@ -287,8 +287,6 @@ if __name__ == '__main__':
 
     nodes_data, links_data = net.parse_xml('data/network_structure.xml')
     test_network = RivalAntsAlgorithmNetwork(nodes_data, links_data, 2)
-    link = test_network.get_link_by_id('L85')
-    link.load = link.capacity
 
     for i in range(1000):
         new_dist_cap_love = random.normalvariate(params[0], 0.25)
