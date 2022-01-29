@@ -134,9 +134,10 @@ class RivalAntsAlgorithmNetwork(net.Network):
                  ant_types_count: int,
                  pheromone_evaporation_coefficient: float = 0.5) -> None:
         super().__init__(nodes_ids, links_data)
-        min_link_cost = min([link.cost for link in self.links])
+        #min_link_cost = min([link.cost for link in self.links])
         for i in range(len(self.links)):
-            self.links[i].cost /= min_link_cost
+            #self.links[i].cost /= min_link_cost
+            self.links[i].cost = 1
             self.links[i].load = 0.01 * self.links[i].capacity
         self.pheromones_amounts =\
             np.ones((ant_types_count, len(self.links)))
