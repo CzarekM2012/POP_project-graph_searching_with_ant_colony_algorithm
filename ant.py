@@ -67,6 +67,7 @@ class RivalDistanceAnt(RivalAnt):
                 math.pow(1/(link.cost + distance_heuristic),
                          self.criterion_influence)
             links_attractiveness.append(pheromones_impact * criterion_impact)
+        print(f'Dist {len(self.path)} {links_attractiveness}')
         return links_attractiveness
 
 
@@ -123,6 +124,7 @@ class RivalCapacityAnt(RivalAnt):
                 math.pow(free_capacity * math.pow(new_path_avg_free_capacity, links_left_approximation),
                          self.criterion_influence)
             links_attractiveness.append(pheromones_impact * criterion_impact)
+        print(f'Cap {len(self.path)} {links_attractiveness}')
         return links_attractiveness
 
 
@@ -283,44 +285,44 @@ if __name__ == '__main__':
     nodes_data, links_data = net.parse_xml('data/network_structure.xml')
     test_network = RivalAntsAlgorithmNetwork(nodes_data, links_data, 2)
 
-    for i in range(1):
-        #new_dist_cap_love = random.normalvariate(params[0], 0.25)
-        #new_dist_pheromone = random.normalvariate(params[1], 1)
-        #new_dist_criterion = random.normalvariate(params[2], 1)
-        #new_cap_dist_love = random.normalvariate(params[3], 0.25)
-        #new_cap_pheromone = random.normalvariate(params[4], 1)
-        #new_cap_criterion = random.normalvariate(params[5], 1)
-#
-        #if(new_dist_cap_love >= 0):
-        #    new_dist_cap_love = params[0]
-        #if(new_dist_pheromone < 0):
-        #    new_dist_pheromone = params[1]
-        #if(new_dist_criterion < 0):
-        #    new_dist_criterion = params[2]
-        #if(new_cap_dist_love >= 0):
-        #    new_cap_dist_love = params[3]
-        #if(new_cap_pheromone < 0):
-        #    new_cap_pheromone = params[4]
-        #if(new_cap_criterion < 0):
-        #    new_cap_criterion = params[5]
-#
-        #params = (new_dist_cap_love, new_dist_pheromone, new_dist_criterion,
-        #          new_cap_dist_love, new_cap_pheromone, new_cap_criterion)
-        #summary = [[], [], []]
-        #logging.critical(params)
-        for i in range(1):
+    for i in range(1000):
+        new_dist_cap_love = random.normalvariate(params[0], 0.25)
+        new_dist_pheromone = random.normalvariate(params[1], 1)
+        new_dist_criterion = random.normalvariate(params[2], 1)
+        new_cap_dist_love = random.normalvariate(params[3], 0.25)
+        new_cap_pheromone = random.normalvariate(params[4], 1)
+        new_cap_criterion = random.normalvariate(params[5], 1)
+
+        if(new_dist_cap_love >= 0):
+            new_dist_cap_love = params[0]
+        if(new_dist_pheromone < 0):
+            new_dist_pheromone = params[1]
+        if(new_dist_criterion < 0):
+            new_dist_criterion = params[2]
+        if(new_cap_dist_love >= 0):
+            new_cap_dist_love = params[3]
+        if(new_cap_pheromone < 0):
+            new_cap_pheromone = params[4]
+        if(new_cap_criterion < 0):
+            new_cap_criterion = params[5]
+
+        params = (new_dist_cap_love, new_dist_pheromone, new_dist_criterion,
+                  new_cap_dist_love, new_cap_pheromone, new_cap_criterion)
+        summary = [[], [], []]
+        logging.critical(params)
+        for i in range(10):
             paths =\
                 test_network.rival_ants_algorithm('Aachen', 'Passau',
                                                   [(RivalDistanceAnt((1, params[0]), params[1], params[2])),
                                                    (RivalCapacityAnt((params[3], 1), params[4], params[5]))],
                                                   cost_func, 5, 25)
 
-#            summary[0].append(len(paths[0]))
-#            summary[1].append(len(paths[1]))
-#            summary[2].append(len(set(paths[0]) & set(paths[1])))
-#            logging.error(f'shortest distance path {len(paths[0])} edges, \
-#lowest load path {len(paths[1])} edges, \
-#common edges count {len(set(paths[0]) & set(paths[1]))}')
-#        logging.error(f'shortest distance path {sum(summary[0])/len(summary[0]):.2f} edges on average, \
-#lowest load path {sum(summary[1])/len(summary[1]):.2f} edges on average, \
-#common edges count {sum(summary[2])/len(summary[2]):.2f} on average')
+            summary[0].append(len(paths[0]))
+            summary[1].append(len(paths[1]))
+            summary[2].append(len(set(paths[0]) & set(paths[1])))
+            logging.error(f'shortest distance path {len(paths[0])} edges, \
+lowest load path {len(paths[1])} edges, \
+common edges count {len(set(paths[0]) & set(paths[1]))}')
+        logging.error(f'shortest distance path {sum(summary[0])/len(summary[0]):.2f} edges on average, \
+lowest load path {sum(summary[1])/len(summary[1]):.2f} edges on average, \
+common edges count {sum(summary[2])/len(summary[2]):.2f} on average')
