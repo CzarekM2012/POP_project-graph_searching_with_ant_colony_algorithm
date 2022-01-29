@@ -2,6 +2,7 @@ from xml.etree import ElementTree as ET
 from collections import Counter
 from math import log10
 from queue import SimpleQueue
+import numpy as np
 
 
 class Node:
@@ -75,7 +76,7 @@ and their `ends` contain the same ids.
 
     def __ne__(self, other: 'Link') -> bool:
         return not self == other
-    
+
     def __str__(self):
         return f"Link {self.id} between {self.ends[0]} and {self.ends[1]}, capacity: {self.capacity}, cost: {self.cost}"
 
@@ -103,6 +104,7 @@ to return from internal, numerical ids to original string ids.
                 self.nodes.append(Node(node_int_id))
                 node_id_str_to_int[node_str_id] = node_int_id
                 node_int_id += 1
+        self.nodes = np.asarray(self.nodes)
 
         self.links = list[Link]()
         for link_str_id, end1_str_id, end2_str_id, capacity, cost\
@@ -116,13 +118,14 @@ to return from internal, numerical ids to original string ids.
                 self.nodes[end1_int_id].add_link(link_int_id)
                 self.nodes[end2_int_id].add_link(link_int_id)
                 link_int_id += 1
-        
+        self.links = np.asarray(self.links)
+
     def get_node_id_str_list(self) -> list[str]:
         list = []
         for index, node in enumerate(self.nodes):
             list.append(self.nodes_ids_map[index])
         return list
-    
+
     def get_link_data_list(self) -> list[tuple[str, str, str, float, float]]:
         list = []
         for index, link in enumerate(self.links):
@@ -138,10 +141,10 @@ to return from internal, numerical ids to original string ids.
 
     def get_network_copy(self) -> "Network":
         network = Network(self.get_node_id_str_list(), self.get_link_data_list())
-        
+
         for index, link in enumerate(network.links):
             link.load = self.links[index].load
-        
+
         return network
 
     def nodes_min_distance(self) -> list[list[float]]:

@@ -114,12 +114,13 @@ class RivalCapacityAnt(RivalAnt):
                 (link.capacity + self.path_avg_capacity * self.path_edges_count) / (self.path_edges_count + 1)
             new_path_link_avg_load =\
                 (link.load + self.path_avg_load * self.path_edges_count) / (self.path_edges_count + 1)
-            links_left_approximation = round(distance_heuristic/new_path_link_avg_length)
+            links_left_approximation =\
+                round(distance_heuristic/new_path_link_avg_length)
             free_capacity = (link.capacity - link.load)/link.capacity
-            new_path_link_avg_free_capacity =\
+            new_path_avg_free_capacity =\
                 (new_path_link_avg_capacity - new_path_link_avg_load)/new_path_link_avg_capacity
             criterion_impact =\
-                math.pow(free_capacity * math.pow(new_path_link_avg_free_capacity, links_left_approximation),
+                math.pow(free_capacity * math.pow(new_path_avg_free_capacity, links_left_approximation),
                          self.criterion_influence)
             links_attractiveness.append(pheromones_impact * criterion_impact)
         return links_attractiveness
@@ -134,6 +135,7 @@ class RivalAntsAlgorithmNetwork(net.Network):
         min_link_cost = min([link.cost for link in self.links])
         for i in range(len(self.links)):
             self.links[i].cost /= min_link_cost
+            self.links[i].load = 0.01 * self.links[i].capacity
         self.pheromones_amounts =\
             np.ones((ant_types_count, len(self.links)))
         self.pheromone_evaporation_coefficient =\
