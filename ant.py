@@ -69,7 +69,7 @@ class RivalDistanceAnt(RivalAnt):
             if(link.load >= link.capacity):
                 criterion_impact = 0
             links_attractiveness.append(pheromones_impact * criterion_impact)
-        print(f'Dist {len(self.path)} {links_attractiveness}')
+        #print(f'Dist {len(self.path)} {links_attractiveness}')
         return links_attractiveness
 
 
@@ -126,7 +126,7 @@ class RivalCapacityAnt(RivalAnt):
                 math.pow(free_capacity * math.pow(new_path_avg_free_capacity, links_left_approximation),
                          self.criterion_influence)
             links_attractiveness.append(pheromones_impact * criterion_impact)
-        print(f'Cap {len(self.path)} {links_attractiveness}')
+        #print(f'Cap {len(self.path)} {links_attractiveness}')
         return links_attractiveness
 
 

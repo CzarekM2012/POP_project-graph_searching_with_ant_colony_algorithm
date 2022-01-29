@@ -133,7 +133,10 @@ def test(algorithm, start_node_id, end_node_id):
         test_network = RivalAntsAlgorithmNetwork(network.get_node_id_str_list(), network.get_link_data_list(), 2)
 
         for index, link in enumerate(test_network.links):
-            link.load = network.links[index].load / network.links[index].capacity
+            if network.links[index].load == 0:
+                link.load = 0.01
+            else:
+                link.load = network.links[index].load
 
     time_prep = time.time() - time_prep
 
@@ -256,10 +259,10 @@ def apply_load(solution, load):
     # Apply the load to every node
     for edge, value in enumerate(solution):
         if value == 1 or value == 3:
-            network.links[edge].load += load
+            network.links[edge].load = min(network.links[edge].load + load, network.links[edge].capacity - 0.0001) # -0.0001 to prevent remaining space from reaching 0, which prevents calculating logarithms
 
         if value == 2 or value == 3:
-            network.links[edge].load += load
+            network.links[edge].load = min(network.links[edge].load + load, network.links[edge].capacity - 0.0001)
     
     return load
 
@@ -315,7 +318,7 @@ def test_cumulative_network_load(task_load_min, task_load_max):
         load = task[2]
         #print(f"{network.nodes_ids_map[start_id]} {network.nodes_ids_map[end_id]}")
 
-        network = get_network_to_fit(load)
+        #network = get_network_to_fit(load)
 
         solution, score, time_prep, time_run = test(ALG_A_STAR, start_id, end_id)
 
@@ -362,14 +365,30 @@ WEIGHT_DIST = 1
 nodes_ids, links_data = parse_xml(path.normpath(path.join('data', 'network_structure.xml')))
 network = Network(nodes_ids, links_data)
 
-#test_random_pair()
+print("Minimal load:")
+randomize_network_load(network, 0.1, 0.2)
+test_random_pair()
 
-
-# A simple test to check single path predictions in a randomly filled network (germany-50)
-
+print("Average load:")
 randomize_network_load(network, 0.4, 0.6)
 test_random_pair()
 
-randomize_network_load(network, 0.4, 0.6)
-test_cumulative_network_load(0.01, 0.03)
+print("Almost full:")
+randomize_network_load(network, 0.8, 0.9)
+test_random_pair()
 
+# A more complicated test that accumulates load (but doesn't remove full links)
+print("Cumulative load:")
+randomize_network_load(network, 0.4, 0.6)
+test_cumulative_network_load(1, 5)
+
+# A test to show A* unacceptable computing times when forced to include a common link in a solution
+for link_data in links_data:
+    if link_data[0] == "L85":
+        links_data.remove(link_data)
+        break
+
+network = Network(nodes_ids, links_data)
+
+test(ALG_A_STAR, network.nodes_ids_map.index("Passau"), network.nodes_ids_map.index("Aachen"))
+print("A* colony finished common edge test. Never actually going to happen")
