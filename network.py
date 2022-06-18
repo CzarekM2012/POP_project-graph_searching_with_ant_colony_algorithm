@@ -1,5 +1,8 @@
 from xml.etree import ElementTree as ET
 from collections import Counter
+from math import log10
+from queue import SimpleQueue
+import numpy as np
 
 
 class Node:
@@ -12,6 +15,7 @@ their `links` contain the same ids
     def __init__(self, id: int) -> None:
         self.id = id
         self.links = list[int]()
+        self.comp = 0   # To make custom comparisions e.g. with PriorityQueue
 
     def add_link(self, link_id: int) -> None:
         if link_id not in self.links:
@@ -29,6 +33,9 @@ their `links` contain the same ids
     def __ne__(self, other: 'Node') -> bool:
         return not self == other
 
+    def __lt__(self, other):
+        return self.comp < other.comp
+
 
 class Link:
     """
@@ -44,6 +51,7 @@ and their `ends` contain the same ids.
         self.id = self_id
         self.ends = (end1_id, end2_id)
         self.capacity = capacity
+        self.load = 0
         self.cost = cost
 
     def get_other_end(self, end: int) -> int:
@@ -52,6 +60,10 @@ and their `ends` contain the same ids.
         elif end == self.ends[1]:
             return self.ends[0]
         raise ValueError('given end is not one of the ends of this link')
+
+    def get_a_star_cost(self):
+        return -log10((self.capacity - self.load)/self.capacity) # Negative to turn log() into a positive value, for it to be processed by Dijkstra
+        #return self.cost
 
     def __eq__(self, other: 'Link') -> bool:
         return ((self.ends[0] == other.ends[0] and
@@ -64,6 +76,9 @@ and their `ends` contain the same ids.
 
     def __ne__(self, other: 'Link') -> bool:
         return not self == other
+
+    def __str__(self):
+        return f"Link {self.id} between {self.ends[0]} and {self.ends[1]}, capacity: {self.capacity}, cost: {self.cost}"
 
 
 class Network:
@@ -89,6 +104,7 @@ to return from internal, numerical ids to original string ids.
                 self.nodes.append(Node(node_int_id))
                 node_id_str_to_int[node_str_id] = node_int_id
                 node_int_id += 1
+        self.nodes = np.asarray(self.nodes)
 
         self.links = list[Link]()
         for link_str_id, end1_str_id, end2_str_id, capacity, cost\
@@ -102,6 +118,61 @@ to return from internal, numerical ids to original string ids.
                 self.nodes[end1_int_id].add_link(link_int_id)
                 self.nodes[end2_int_id].add_link(link_int_id)
                 link_int_id += 1
+        self.links = np.asarray(self.links)
+
+    def get_node_id_str_list(self) -> list[str]:
+        list = []
+        for index, node in enumerate(self.nodes):
+            list.append(self.nodes_ids_map[index])
+        return list
+
+    def get_link_data_list(self) -> list[tuple[str, str, str, float, float]]:
+        list = []
+        for index, link in enumerate(self.links):
+            link_tuple = (
+                self.links_ids_map[index],
+                self.nodes_ids_map[link.ends[0]],
+                self.nodes_ids_map[link.ends[1]],
+                link.capacity,
+                link.cost
+            )
+            list.append(link_tuple)
+        return list
+
+    def get_network_copy(self) -> "Network":
+        network = Network(self.get_node_id_str_list(), self.get_link_data_list())
+
+        for index, link in enumerate(network.links):
+            link.load = self.links[index].load
+
+        return network
+
+    def nodes_min_distance(self) -> list[list[float]]:
+        min_dist = []
+        MORE_THAN_LONGEST_PATH =\
+            max([link.cost for link in self.links]) * len(self.links) + 1
+        for _ in range(len(self.nodes)):
+            min_dist.append([MORE_THAN_LONGEST_PATH] * len(self.nodes))
+
+        for node in self.nodes:
+            min_dist[node.id][node.id] = 0
+
+        # BFS for each node
+        for start_node in self.nodes:
+            q = SimpleQueue()
+            q.put(start_node)
+            while not q.empty():
+                node = q.get()
+
+                for link_id in node.links:
+                    link = self.links[link_id]
+                    new_dist = min_dist[start_node.id][node.id] + link.cost
+
+                    for end in link.ends:
+                        if min_dist[start_node.id][end] > new_dist:
+                            q.put(self.nodes[end])
+                            min_dist[start_node.id][end] = new_dist
+        return min_dist
 
 
 def parse_xml(path: str)\
